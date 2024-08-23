@@ -1,12 +1,11 @@
 ---@diagnostic disable: undefined-global
 -- Network boot usage means that we have internet card so we store some code remotely because of 4096 bytes limit
 
-ocelot.log(({ ... })[1])
 local rootUrl = ({ ... })[1]
-local _networkBootRootUrl = rootUrl
-local _networkBootMetadata = load('return ' .. httpGet(rootUrl .. '/.networkBoot'), nil, nil, {})()
+local networkBootMetadata = load('return ' .. httpGet(rootUrl .. '/.networkBoot'), nil, nil, {})()
+local networkBootFilesystemHandles = {}
 
-networkBootFilesystem = {
+local networkBootFilesystem = {
     getLabel = function ()
         return 'Network Boot Filesystem'
     end,
@@ -24,7 +23,7 @@ networkBootFilesystem = {
     end,
     exists = function (path)
         path = path:gsub('^/', ''):gsub('/$', '')
-        for directory, files in pairs(_networkBootMetadata.fileList) do
+        for directory, files in pairs(networkBootMetadata.fileList) do
             for _, file in ipairs(files) do
                 if path == directory .. '/' .. file or path == file or path == directory then
                     return true
@@ -38,7 +37,7 @@ networkBootFilesystem = {
         --[[ TODO ]]
     end,
     isDirectory = function (path)
-        return _networkBootMetadata.fileList[path] ~= nil
+        return networkBootMetadata.fileList[path] ~= nil
     end,
     lastModified = function (path)
         return 0
@@ -46,14 +45,14 @@ networkBootFilesystem = {
     list = function (path)
         local result = {}
 
-        if _networkBootMetadata.fileList[path] then
-            for _, file in ipairs(_networkBootMetadata.fileList[path]) do
+        if networkBootMetadata.fileList[path] then
+            for _, file in ipairs(networkBootMetadata.fileList[path]) do
                 table.insert(result, file)
             end
         end
 
         local dirPrefix = path == '' and '' or path .. '/'
-        for subdir in pairs(_networkBootMetadata.fileList) do
+        for subdir in pairs(networkBootMetadata.fileList) do
             if subdir:sub(1, #dirPrefix) == dirPrefix and subdir ~= path then
                 local nextSlash = subdir:find('/', #dirPrefix + 1)
                 if not nextSlash then
@@ -94,7 +93,7 @@ networkBootFilesystem = {
             return nil
         end
         handle.readAll = true
-        local data = httpGet(_networkBootRootUrl .. (not handle[1]:find('^/') and ('/' .. handle[1]) or handle[1]))
+        local data = httpGet(rootUrl .. (not handle[1]:find('^/') and ('/' .. handle[1]) or handle[1]))
         return data
     end,
     seek = function (handle, whence, offset)
@@ -141,4 +140,4 @@ component.list = function (filter, exact)
     end
     return originalReturn
 end
-boot({ filesystem = networkBootAddress, initFile = _networkBootMetadata.initFile })
+boot({ filesystem = networkBootAddress, initFile = networkBootMetadata.initFile })
