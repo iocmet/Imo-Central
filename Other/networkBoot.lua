@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global
 -- Network boot usage means that we have internet card so we store some code remotely because of 4096 bytes limit
 
-print(({ ... })[1])
+ocelot.log(({ ... })[1])
 local rootUrl = ({ ... })[1]
 local _networkBootRootUrl = rootUrl
 local _networkBootMetadata = load('return ' .. httpGet(rootUrl .. '/.networkBoot'), nil, nil, {})()
